@@ -8,12 +8,15 @@ import os
 app = FastAPI()
 
 # Configure the Gemini API key from your .env file
-# Make sure you have python-dotenv installed: pip install python-dotenv
 from dotenv import load_dotenv
 load_dotenv()
 
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 model = genai.GenerativeModel('gemini-1.5-flash')
+
+# ===================================================================
+# ===== SYSTEM AND USER PROMPT =====
+# ===================================================================
 
 # Pydantic model for the request body to ensure we get the right data
 class UserInput(BaseModel):
@@ -38,12 +41,44 @@ async def generate_startup_idea(user_input: UserInput):
     user_prompt = f"User's Skills: {user_input.skills}. User's Interests: {user_input.interests}."
 
     # 3. Combine the prompts for the final API call
-    # The f-string combines the system instructions with the specific user query
     full_prompt = f"{system_prompt}\n\n{user_prompt}"
 
     # 4. Call the Gemini API
     response = model.generate_content(full_prompt)
 
     # 5. Return the AI's response
-    # We will parse the text to ensure it's valid JSON later, but for now, we return the text
     return {"idea": response.text}
+
+# ===================================================================
+# ===== ZERO-SHOT PROMPTING =====
+# ===================================================================
+
+# 1. Create a new Pydantic model for the tagline generator's input
+class TaglineRequest(BaseModel):
+    concept: str
+
+# 2. Create the new endpoint that demonstrates Zero-Shot Prompting
+@app.post("/generate-tagline-zero-shot")
+async def generate_tagline_zero_shot(request: TaglineRequest):
+    """
+    This endpoint demonstrates zero-shot prompting.
+    It asks the AI to generate a tagline based on a startup concept
+    without providing any examples of what a good tagline looks like.
+    """
+    
+    # This prompt is direct and gives a command without any examples.
+    # This is the core of "zero-shot".
+    prompt = f"""
+    You are a world-class branding expert.
+    Your task is to generate a short, memorable, and catchy tagline for the following startup concept.
+
+    Startup Concept: "{request.concept}"
+
+    Tagline:
+    """
+
+    # Call the Gemini API with the zero-shot prompt
+    response = model.generate_content(prompt)
+
+    # Return the AI's generated tagline
+    return {"tagline": response.text}
