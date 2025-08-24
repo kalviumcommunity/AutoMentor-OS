@@ -82,3 +82,45 @@ async def generate_tagline_zero_shot(request: TaglineRequest):
 
     # Return the AI's generated tagline
     return {"tagline": response.text}
+
+# ===================================================================
+# =====  ONE SHOT PROMPTING ======
+# ===================================================================
+
+# 1. Create a new Pydantic model for the headline generator's input
+class HeadlineRequest(BaseModel):
+    description: str
+
+# 2. Create the new endpoint that demonstrates One-Shot Prompting
+@app.post("/generate-headline-one-shot")
+async def generate_headline_one_shot(request: HeadlineRequest):
+    """
+    This endpoint demonstrates one-shot prompting.
+    It provides the AI with a single, clear example of an input and
+    the desired output format and style to guide its response.
+    """
+    
+    # 3. Design the One-Shot Prompt
+    # The key is the inclusion of the "**Example Input:**" and "**Example Output:**" block.
+    prompt = f"""
+    Generate a catchy landing page headline for a startup. The headline should be concise and benefit-oriented.
+
+    --
+    **Example Input:**
+    A platform that connects local artists with coffee shops to display their work.
+
+    **Example Output:**
+    Turn Your Cafe into a Gallery. Discover Local Art.
+    --
+
+    **Startup Description:**
+    {request.description}
+
+    **Headline:**
+    """
+
+    # 4. Call the Gemini API
+    response = model.generate_content(prompt)
+
+    # 5. Return the AI's response
+    return {"headline": response.text.strip().replace('"', '')}
