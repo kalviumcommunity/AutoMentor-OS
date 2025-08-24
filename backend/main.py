@@ -124,3 +124,55 @@ async def generate_headline_one_shot(request: HeadlineRequest):
 
     # 5. Return the AI's response
     return {"headline": response.text.strip().replace('"', '')}
+
+
+
+# ===================================================================
+# ===== MULTI SHOT PROMPTING ======
+# ===================================================================
+
+# 1. Create a new Pydantic model for the features generator's input
+class FeaturesRequest(BaseModel):
+    description: str
+
+# 2. Create the new endpoint that demonstrates Multi-Shot Prompting
+@app.post("/generate-features-multi-shot")
+async def generate_features_multi_shot(request: FeaturesRequest):
+    """
+    This endpoint demonstrates multi-shot (or few-shot) prompting.
+    It provides the AI with several examples to teach it a more complex
+    pattern: generating a feature title and a benefit-oriented description.
+    """
+    
+    # 3. Design the Multi-Shot Prompt
+    # By providing two distinct examples, we teach the AI the desired pattern.
+    prompt = f"""
+    Generate a list of 3 key features with brief descriptions for a startup's landing page. The format should be a hyphenated list with the feature name in bold.
+
+    --
+    **Example 1:**
+    Description: An app that uses AI to create personalized meal plans.
+    Features:
+    - **AI-Powered Personalization:** Get meal plans tailored to your dietary needs and goals.
+    - **Automatic Grocery Lists:** Save time with shopping lists generated from your weekly plan.
+    - **Recipe Discovery:** Explore thousands of healthy and delicious recipes.
+    --
+    **Example 2:**
+    Description: A service that provides on-demand dog walkers.
+    Features:
+    - **GPS-Tracked Walks:** Monitor your dog's walk in real-time for peace of mind.
+    - **Vetted & Insured Walkers:** Trust your pet with our community of certified professionals.
+    - **Instant Booking:** Find and book a reliable walker in minutes.
+    --
+
+    **Startup Description:**
+    {request.description}
+
+    **Features:**
+    """
+
+    # 4. Call the Gemini API
+    response = model.generate_content(prompt)
+
+    # 5. Return the AI's response
+    return {"features": response.text.strip()}
