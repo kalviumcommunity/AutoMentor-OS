@@ -15,7 +15,7 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 model = genai.GenerativeModel('gemini-1.5-flash')
 
 # ===================================================================
-# ===== SYSTEM AND USER PROMPT =====
+# ===== SYSTEM/USER PROMPT & DYNAMIC PROMPTING =====
 # ===================================================================
 
 # Pydantic model for the request body
@@ -37,8 +37,11 @@ async def generate_startup_idea(user_input: UserInput):
     """
 
     # 2. Create the User Prompt from the user's input
-    # DYNAMIC PROMPTING: The user_prompt is created dynamically using an f-string
-    # to inject the user's skills and interests into the prompt at runtime.
+
+    # DYNAMIC PROMPTING ASSIGNMENT: The user_prompt below is created dynamically.
+    # It uses an f-string to inject the user's specific skills and interests
+    # into the prompt template at runtime, making it personal and context-aware.
+
     user_prompt = f"User's Skills: {user_input.skills}. User's Interests: {user_input.interests}."
 
     # 3. Combine the prompts for the final API call
@@ -54,11 +57,10 @@ async def generate_startup_idea(user_input: UserInput):
 # ===== ZERO-SHOT PROMPTING =====
 # ===================================================================
 
-# 1. Create a new Pydantic model for the tagline generator's input
+# Pydantic model for the tagline generator's input
 class TaglineRequest(BaseModel):
     concept: str
 
-# 2. Create the new endpoint that demonstrates Zero-Shot Prompting
 @app.post("/generate-tagline-zero-shot")
 async def generate_tagline_zero_shot(request: TaglineRequest):
     """
@@ -66,9 +68,6 @@ async def generate_tagline_zero_shot(request: TaglineRequest):
     It asks the AI to generate a tagline based on a startup concept
     without providing any examples of what a good tagline looks like.
     """
-    
-    # This prompt is direct and gives a command without any examples.
-    # This is the core of "zero-shot".
     prompt = f"""
     You are a world-class branding expert.
     Your task is to generate a short, memorable, and catchy tagline for the following startup concept.
@@ -77,22 +76,17 @@ async def generate_tagline_zero_shot(request: TaglineRequest):
 
     Tagline:
     """
-
-    # Call the Gemini API with the zero-shot prompt
     response = model.generate_content(prompt)
-
-    # Return the AI's generated tagline
     return {"tagline": response.text}
 
 # ===================================================================
 # =====  ONE SHOT PROMPTING ======
 # ===================================================================
 
-# 1. Create a new Pydantic model for the headline generator's input
+# Pydantic model for the headline generator's input
 class HeadlineRequest(BaseModel):
     description: str
 
-# 2. Create the new endpoint that demonstrates One-Shot Prompting
 @app.post("/generate-headline-one-shot")
 async def generate_headline_one_shot(request: HeadlineRequest):
     """
@@ -100,9 +94,6 @@ async def generate_headline_one_shot(request: HeadlineRequest):
     It provides the AI with a single, clear example of an input and
     the desired output format and style to guide its response.
     """
-    
-    # 3. Design the One-Shot Prompt
-    # The key is the inclusion of the "**Example Input:**" and "**Example Output:**" block.
     prompt = f"""
     Generate a catchy landing page headline for a startup. The headline should be concise and benefit-oriented.
 
@@ -119,24 +110,17 @@ async def generate_headline_one_shot(request: HeadlineRequest):
 
     **Headline:**
     """
-
-    # 4. Call the Gemini API
     response = model.generate_content(prompt)
-
-    # 5. Return the AI's response
     return {"headline": response.text.strip().replace('"', '')}
-
-
 
 # ===================================================================
 # ===== MULTI SHOT PROMPTING ======
 # ===================================================================
 
-# 1. Create a new Pydantic model for the features generator's input
+# Pydantic model for the features generator's input
 class FeaturesRequest(BaseModel):
     description: str
 
-# 2. Create the new endpoint that demonstrates Multi-Shot Prompting
 @app.post("/generate-features-multi-shot")
 async def generate_features_multi_shot(request: FeaturesRequest):
     """
@@ -144,9 +128,6 @@ async def generate_features_multi_shot(request: FeaturesRequest):
     It provides the AI with several examples to teach it a more complex
     pattern: generating a feature title and a benefit-oriented description.
     """
-    
-    # 3. Design the Multi-Shot Prompt
-    # By providing two distinct examples, we teach the AI the desired pattern.
     prompt = f"""
     Generate a list of 3 key features with brief descriptions for a startup's landing page. The format should be a hyphenated list with the feature name in bold.
 
@@ -171,23 +152,19 @@ async def generate_features_multi_shot(request: FeaturesRequest):
 
     **Features:**
     """
-
-    # 4. Call the Gemini API
     response = model.generate_content(prompt)
-
-    # 5. Return the AI's response
     return {"features": response.text.strip()}
-
 
 # ===================================================================
 # ===== CHAIN OF THOUGHT PROMPTING ======
 # ===================================================================
 
-# 1. Create a new Pydantic model for the validation request
+
+# Pydantic model for the validation request
 class ValidationRequest(BaseModel):
     idea: str
 
-# 2. Create the new endpoint that demonstrates Chain of Thought Prompting
+
 @app.post("/validate-idea-cot")
 async def validate_idea_cot(request: ValidationRequest):
     """
@@ -195,10 +172,7 @@ async def validate_idea_cot(request: ValidationRequest):
     It instructs the model to follow a series of reasoning steps before
     providing a final summary, leading to a more thorough analysis.
     """
-    
-    # 3. Design the Chain of Thought Prompt
-    # The key phrase "Let's think step by step" and the numbered instructions
-    # trigger the model's reasoning process.
+
     prompt = f"""
     Analyze the market viability of the following startup idea. Let's think step by step.
     First, identify the primary target audience for this idea, including their key demographics and needs.
@@ -208,9 +182,6 @@ async def validate_idea_cot(request: ValidationRequest):
     Startup Idea: "{request.idea}"
     """
 
-    # 4. Call the Gemini API
     response = model.generate_content(prompt)
-
-    # 5. Return the AI's structured analysis
     return {"validation_analysis": response.text.strip()}
 
