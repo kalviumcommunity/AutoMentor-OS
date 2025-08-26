@@ -18,12 +18,11 @@ model = genai.GenerativeModel('gemini-1.5-flash')
 # ===== SYSTEM AND USER PROMPT =====
 # ===================================================================
 
-# Pydantic model for the request body to ensure we get the right data
+# Pydantic model for the request body
 class UserInput(BaseModel):
     skills: str
     interests: str
 
-# --- This is the core of your assignment ---
 @app.post("/generate-startup-idea")
 async def generate_startup_idea(user_input: UserInput):
     # 1. Define the System Prompt using the RTFC framework
@@ -38,6 +37,8 @@ async def generate_startup_idea(user_input: UserInput):
     """
 
     # 2. Create the User Prompt from the user's input
+    # DYNAMIC PROMPTING: The user_prompt is created dynamically using an f-string
+    # to inject the user's skills and interests into the prompt at runtime.
     user_prompt = f"User's Skills: {user_input.skills}. User's Interests: {user_input.interests}."
 
     # 3. Combine the prompts for the final API call
@@ -176,3 +177,40 @@ async def generate_features_multi_shot(request: FeaturesRequest):
 
     # 5. Return the AI's response
     return {"features": response.text.strip()}
+
+
+# ===================================================================
+# ===== CHAIN OF THOUGHT PROMPTING ======
+# ===================================================================
+
+# 1. Create a new Pydantic model for the validation request
+class ValidationRequest(BaseModel):
+    idea: str
+
+# 2. Create the new endpoint that demonstrates Chain of Thought Prompting
+@app.post("/validate-idea-cot")
+async def validate_idea_cot(request: ValidationRequest):
+    """
+    This endpoint demonstrates Chain of Thought (CoT) prompting.
+    It instructs the model to follow a series of reasoning steps before
+    providing a final summary, leading to a more thorough analysis.
+    """
+    
+    # 3. Design the Chain of Thought Prompt
+    # The key phrase "Let's think step by step" and the numbered instructions
+    # trigger the model's reasoning process.
+    prompt = f"""
+    Analyze the market viability of the following startup idea. Let's think step by step.
+    First, identify the primary target audience for this idea, including their key demographics and needs.
+    Second, list 2-3 potential competitors or existing alternatives and what they do well or poorly.
+    Third, based on the audience and competitors, provide a summary of the idea's potential strengths and weaknesses.
+
+    Startup Idea: "{request.idea}"
+    """
+
+    # 4. Call the Gemini API
+    response = model.generate_content(prompt)
+
+    # 5. Return the AI's structured analysis
+    return {"validation_analysis": response.text.strip()}
+
