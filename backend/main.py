@@ -178,3 +178,62 @@ async def validate_idea_cot(request: ValidationRequest):
     """
     response = model.generate_content(prompt)
     return {"validation_analysis": response.text.strip()}
+
+# ===================================================================
+# ===== ADD THE FOLLOWING CODE FOR THE TOKENS ASSIGNMENT ======
+# ===================================================================
+
+# 1. Create Pydantic models for the response to structure the output
+class TokenUsage(BaseModel):
+    prompt_tokens: int
+    response_tokens: int
+    total_tokens: int
+
+class ValidationResponseWithTokens(BaseModel):
+    validation_analysis: str
+    token_usage: TokenUsage
+
+# 2. Create the new endpoint that logs and returns token counts
+@app.post("/validate-idea-with-tokens", response_model=ValidationResponseWithTokens)
+async def validate_idea_with_tokens(request: ValidationRequest):
+    """
+    This endpoint demonstrates token counting. It performs an analysis and
+    returns the token usage details from the Gemini API's usage_metadata.
+    """
+    
+    # Using the same powerful Chain of Thought prompt from before
+    prompt = f"""
+    Analyze the market viability of the following startup idea. Let's think step by step.
+    First, identify the primary target audience for this idea.
+    Second, list 2-3 potential competitors or existing alternatives.
+    Third, provide a summary of the idea's potential strengths and weaknesses.
+
+    Startup Idea: "{request.idea}"
+    """
+
+    # 3. Call the Gemini API
+    response = model.generate_content(prompt)
+
+    # 4. Extract token usage from the response metadata (the efficient way)
+    usage_metadata = response.usage_metadata
+    prompt_tokens = usage_metadata.prompt_token_count
+    response_tokens = usage_metadata.candidates_token_count
+    total_tokens = usage_metadata.total_token_count
+    
+    # 5. Log the number of tokens to the console/terminal
+    print("--- Token Usage ---")
+    print(f"Prompt tokens: {prompt_tokens}")
+    print(f"Response tokens: {response_tokens}")
+    print(f"Total tokens: {total_tokens}")
+    print("-------------------")
+
+    # 6. Return the structured response including the token count
+    return ValidationResponseWithTokens(
+        validation_analysis=response.text.strip(),
+        token_usage=TokenUsage(
+            prompt_tokens=prompt_tokens,
+            response_tokens=response_tokens,
+            total_tokens=total_tokens
+        )
+    )
+
