@@ -337,3 +337,49 @@ async def generate_marketing_angles_with_top_p(request: MarketingAngleRequest):
         "top_p_used": request.top_p
     }
 
+# ===================================================================
+# ===== IMPLEMENTED TOP-K ======
+# ===================================================================
+from pydantic import Field
+
+# 1. Create a Pydantic model for the request. We'll allow the user
+#    to pass in a top_k value.
+class FaqRequest(BaseModel):
+    description: str
+    top_k: int = Field(
+        40, 
+        ge=1,
+        description="Restricts the model's choices to the top K most likely tokens. 1 is very restrictive, 50 is less so."
+    )
+
+# 2. Create the new endpoint that uses the top_k parameter
+@app.post("/generate-faq-with-top-k")
+async def generate_faq_with_top_k(request: FaqRequest):
+    """
+    This endpoint demonstrates the use of the 'top_k' parameter.
+    Top K restricts the model's choices to a fixed number of the most
+    likely next tokens, which can make the output more focused and predictable.
+    """
+    
+    # 3. Create the generation_config object.
+    generation_config = {
+        "top_k": request.top_k,
+    }
+
+    prompt = f"""
+    You are a helpful customer support assistant. Generate one common question and a concise, clear answer for the following startup.
+
+    Startup Description: "{request.description}"
+    """
+
+    # 4. Call the Gemini API, passing in the generation_config
+    response = model.generate_content(
+        prompt,
+        generation_config=generation_config
+    )
+
+    # 5. Return the AI's response
+    return {
+        "faq": response.text.strip(),
+        "top_k_used": request.top_k
+    }
