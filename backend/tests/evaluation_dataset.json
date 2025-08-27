@@ -1,0 +1,42 @@
+[
+  {
+    "id": "test_case_1_tech_fitness",
+    "input": {
+      "skills": "Python, data analysis",
+      "interests": "Fitness, personal health"
+    },
+    "expected_criteria": "The idea must be a technology product or service. It must clearly combine data analysis with fitness or health. The monetization strategy should be plausible for a tech product (e.g., subscription, one-time purchase)."
+  },
+  {
+    "id": "test_case_2_creative_sustainability",
+    "input": {
+      "skills": "Graphic design, marketing",
+      "interests": "Sustainability, eco-friendly products"
+    },
+    "expected_criteria": "The idea must be related to branding, design, or marketing for sustainable or eco-friendly businesses. The concept should be creative and visually oriented."
+  },
+  {
+    "id": "test_case_3_education_music",
+    "input": {
+      "skills": "Teaching, music theory",
+      "interests": "Mobile apps, education technology"
+    },
+    "expected_criteria": "The idea must be an educational tool, preferably a mobile app, focused on teaching music. The concept should be suitable for beginners or students."
+  },
+  {
+    "id": "test_case_4_food_community",
+    "input": {
+      "skills": "Cooking, event planning",
+      "interests": "Community building, local food"
+    },
+    "expected_criteria": "The idea must involve food and community interaction. It could be an event-based service or a platform connecting local food enthusiasts. The monetization should be event- or service-based."
+  },
+  {
+    "id": "test_case_5_writing_tech",
+    "input": {
+      "skills": "Technical writing, software documentation",
+      "interests": "AI, developer tools"
+    },
+    "expected_criteria": "The idea must be a service or tool aimed at developers or tech companies. It must leverage technical writing skills and relate to AI or software documentation."
+  }
+]
