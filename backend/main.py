@@ -245,3 +245,104 @@ async def validate_idea_with_tokens(request: ValidationRequest):
     )
 
 
+# ===================================================================
+# ===== TEMPERATURE-CONTROL  ======
+# ===================================================================
+from pydantic import Field
+
+# 1. Create a Pydantic model for the request. We'll allow the user
+#    to pass in a temperature value, with validation.
+class BrainstormRequest(BaseModel):
+    description: str
+    temperature: float = Field(
+        0.7, 
+        ge=0.0, 
+        le=1.0, 
+        description="The creativity of the response. 0.0 is deterministic, 1.0 is highly creative."
+    )
+
+# 2. Create the new endpoint that uses the temperature parameter
+@app.post("/brainstorm-names-with-temperature")
+async def brainstorm_names_with_temperature(request: BrainstormRequest):
+    """
+    This endpoint demonstrates the use of the 'temperature' parameter.
+    A low temperature gives more predictable names, while a high
+    temperature gives more creative, random names.
+    """
+    
+    # 3. Create the generation_config object to pass to the API
+    # This is how you send parameters like temperature, top_p, etc.
+    generation_config = {
+        "temperature": request.temperature,
+    }
+
+    prompt = f"""
+    You are a creative branding expert. Brainstorm a list of 5 unique and catchy names for the following startup.
+
+    Startup Description: "{request.description}"
+    """
+
+    # 4. Call the Gemini API, passing in the generation_config
+    response = model.generate_content(
+        prompt,
+        generation_config=generation_config
+    )
+
+    # 5. Return the AI's response
+    return {
+        "startup_names": response.text.strip(),
+        "temperature_used": request.temperature
+    }
+
+# ===================================================================
+# ===== IMPLEMENTED TOP-P ======
+# ===================================================================
+from pydantic import Field
+
+# 1. Create a Pydantic model for the request. We'll allow the user
+#    to pass in a top_p value, with validation.
+class MarketingAngleRequest(BaseModel):
+    description: str
+    top_p: float = Field(
+        0.95, 
+        ge=0.0, 
+        le=1.0, 
+        description="The diversity of the response. 0.1 is narrow, 0.95 is diverse."
+    )
+
+# 2. Create the new endpoint that uses the top_p parameter
+@app.post("/generate-marketing-angles-with-top-p")
+async def generate_marketing_angles_with_top_p(request: MarketingAngleRequest):
+    """
+    This endpoint demonstrates the use of the 'top_p' (nucleus sampling) parameter.
+    A low top_p restricts the model to a small pool of high-probability tokens,
+    leading to less diverse output. A high top_p allows for a wider, more
+    diverse range of tokens to be considered.
+    """
+    
+    # 3. Create the generation_config object. It's best practice to primarily
+    #    tune either temperature or top_p, not both aggressively.
+    generation_config = {
+        "top_p": request.top_p,
+        "temperature": 0.7 # Keep temperature stable to isolate the effect of Top P
+    }
+
+    prompt = f"""
+    You are a senior marketing strategist. Generate a list of 3 distinct and creative marketing angles for the following startup.
+
+    Startup Description: "{request.description}"
+    """
+
+    # 4. Call the Gemini API, passing in the generation_config
+    response = model.generate_content(
+        prompt,
+        generation_config=generation_config
+    )
+
+    # 5. Return the AI's response
+    return {
+        "marketing_angles": response.text.strip(),
+        "top_p_used": request.top_p
+    }
+
+
