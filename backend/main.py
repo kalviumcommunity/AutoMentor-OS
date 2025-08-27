@@ -37,9 +37,11 @@ async def generate_startup_idea(user_input: UserInput):
     """
 
     # 2. Create the User Prompt from the user's input
+
     # DYNAMIC PROMPTING ASSIGNMENT: The user_prompt below is created dynamically.
     # It uses an f-string to inject the user's specific skills and interests
     # into the prompt template at runtime, making it personal and context-aware.
+
     user_prompt = f"User's Skills: {user_input.skills}. User's Interests: {user_input.interests}."
 
     # 3. Combine the prompts for the final API call
@@ -157,9 +159,11 @@ async def generate_features_multi_shot(request: FeaturesRequest):
 # ===== CHAIN OF THOUGHT PROMPTING ======
 # ===================================================================
 
+
 # Pydantic model for the validation request
 class ValidationRequest(BaseModel):
     idea: str
+
 
 @app.post("/validate-idea-cot")
 async def validate_idea_cot(request: ValidationRequest):
@@ -168,6 +172,7 @@ async def validate_idea_cot(request: ValidationRequest):
     It instructs the model to follow a series of reasoning steps before
     providing a final summary, leading to a more thorough analysis.
     """
+
     prompt = f"""
     Analyze the market viability of the following startup idea. Let's think step by step.
     First, identify the primary target audience for this idea, including their key demographics and needs.
@@ -176,8 +181,10 @@ async def validate_idea_cot(request: ValidationRequest):
 
     Startup Idea: "{request.idea}"
     """
+
     response = model.generate_content(prompt)
     return {"validation_analysis": response.text.strip()}
+
 
 # ===================================================================
 # ===== TOKENS AND TOKENIZATION ======
@@ -236,6 +243,7 @@ async def validate_idea_with_tokens(request: ValidationRequest):
             total_tokens=total_tokens
         )
     )
+
 
 # ===================================================================
 # ===== TEMPERATURE-CONTROL  ======
@@ -383,3 +391,4 @@ async def generate_faq_with_top_k(request: FaqRequest):
         "faq": response.text.strip(),
         "top_k_used": request.top_k
     }
+
