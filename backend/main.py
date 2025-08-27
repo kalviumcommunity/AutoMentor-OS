@@ -392,3 +392,48 @@ async def generate_faq_with_top_k(request: FaqRequest):
         "top_k_used": request.top_k
     }
 
+# ===================================================================
+# ===== STOP SEQUENCE ======
+# ===================================================================
+
+# 1. Create a Pydantic model for the request.
+class FirstStepRequest(BaseModel):
+    description: str
+
+# 2. Create the new endpoint that uses a stop sequence
+@app.post("/generate-first-step-with-stop-sequence")
+async def generate_first_step_with_stop_sequence(request: FirstStepRequest):
+    """
+    This endpoint demonstrates the use of a 'stop_sequence'.
+    The prompt asks for a list, but the stop sequence will halt generation
+    before the second item, ensuring only the first step is returned.
+    """
+    
+    # 3. Create the generation_config object with a stop sequence.
+    # We will stop the model right before it generates "2.".
+    generation_config = {
+        "stop_sequences": ["2."],
+        "temperature": 0.7 # Using a moderate temperature for good suggestions
+    }
+
+    # This prompt asks for multiple steps, but our stop sequence will cut it short.
+    prompt = f"""
+    You are a marketing expert. Generate a numbered list of the first three marketing steps for the following startup.
+
+    Startup Description: "{request.description}"
+
+    1.
+    """
+
+    # 4. Call the Gemini API, passing in the generation_config
+    response = model.generate_content(
+        prompt,
+        generation_config=generation_config
+    )
+
+    # 5. Return the AI's response, which will be just the first step.
+    # We add "1." back to the front for a clean output.
+    return {
+        "first_step": "1. " + response.text.strip(),
+    }
+
