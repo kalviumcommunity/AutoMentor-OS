@@ -180,7 +180,7 @@ async def validate_idea_cot(request: ValidationRequest):
     return {"validation_analysis": response.text.strip()}
 
 # ===================================================================
-# ===== ADD THE FOLLOWING CODE FOR THE TOKENS ASSIGNMENT ======
+# ===== TOKENS AND TOKENIZATION ======
 # ===================================================================
 
 # 1. Create Pydantic models for the response to structure the output
@@ -236,4 +236,53 @@ async def validate_idea_with_tokens(request: ValidationRequest):
             total_tokens=total_tokens
         )
     )
+
+# ===================================================================
+# ===== TEMPERATURE-CONTROL  ======
+# ===================================================================
+from pydantic import Field
+
+# 1. Create a Pydantic model for the request. We'll allow the user
+#    to pass in a temperature value, with validation.
+class BrainstormRequest(BaseModel):
+    description: str
+    temperature: float = Field(
+        0.7, 
+        ge=0.0, 
+        le=1.0, 
+        description="The creativity of the response. 0.0 is deterministic, 1.0 is highly creative."
+    )
+
+# 2. Create the new endpoint that uses the temperature parameter
+@app.post("/brainstorm-names-with-temperature")
+async def brainstorm_names_with_temperature(request: BrainstormRequest):
+    """
+    This endpoint demonstrates the use of the 'temperature' parameter.
+    A low temperature gives more predictable names, while a high
+    temperature gives more creative, random names.
+    """
+    
+    # 3. Create the generation_config object to pass to the API
+    # This is how you send parameters like temperature, top_p, etc.
+    generation_config = {
+        "temperature": request.temperature,
+    }
+
+    prompt = f"""
+    You are a creative branding expert. Brainstorm a list of 5 unique and catchy names for the following startup.
+
+    Startup Description: "{request.description}"
+    """
+
+    # 4. Call the Gemini API, passing in the generation_config
+    response = model.generate_content(
+        prompt,
+        generation_config=generation_config
+    )
+
+    # 5. Return the AI's response
+    return {
+        "startup_names": response.text.strip(),
+        "temperature_used": request.temperature
+    }
 
