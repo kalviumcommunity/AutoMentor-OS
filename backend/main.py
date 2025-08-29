@@ -43,9 +43,11 @@ async def generate_startup_idea(user_input: UserInput):
     prompt = f"""
     You are an expert startup advisor. Generate a unique and practical startup idea based on the user's provided skills and interests.
 
+
     User's Skills: {user_input.skills}
     User's Interests: {user_input.interests}
     """
+
 
     # 4. Create the generation_config with the new JSON mode settings
     generation_config = {
@@ -170,9 +172,11 @@ async def generate_features_multi_shot(request: FeaturesRequest):
 # ===== CHAIN OF THOUGHT PROMPTING ======
 # ===================================================================
 
+
 # Pydantic model for the validation request
 class ValidationRequest(BaseModel):
     idea: str
+
 
 @app.post("/validate-idea-cot")
 async def validate_idea_cot(request: ValidationRequest):
@@ -181,6 +185,7 @@ async def validate_idea_cot(request: ValidationRequest):
     It instructs the model to follow a series of reasoning steps before
     providing a final summary, leading to a more thorough analysis.
     """
+
     prompt = f"""
     Analyze the market viability of the following startup idea. Let's think step by step.
     First, identify the primary target audience for this idea, including their key demographics and needs.
@@ -189,8 +194,10 @@ async def validate_idea_cot(request: ValidationRequest):
 
     Startup Idea: "{request.idea}"
     """
+
     response = model.generate_content(prompt)
     return {"validation_analysis": response.text.strip()}
+
 
 # ===================================================================
 # ===== TOKENS AND TOKENIZATION ======
@@ -249,6 +256,56 @@ async def validate_idea_with_tokens(request: ValidationRequest):
             total_tokens=total_tokens
         )
     )
+
+# ===================================================================
+# ===== TEMPERATURE-CONTROL  ======
+# ===================================================================
+from pydantic import Field
+
+# 1. Create a Pydantic model for the request. We'll allow the user
+#    to pass in a temperature value, with validation.
+class BrainstormRequest(BaseModel):
+    description: str
+    temperature: float = Field(
+        0.7, 
+        ge=0.0, 
+        le=1.0, 
+        description="The creativity of the response. 0.0 is deterministic, 1.0 is highly creative."
+    )
+
+# 2. Create the new endpoint that uses the temperature parameter
+@app.post("/brainstorm-names-with-temperature")
+async def brainstorm_names_with_temperature(request: BrainstormRequest):
+    """
+    This endpoint demonstrates the use of the 'temperature' parameter.
+    A low temperature gives more predictable names, while a high
+    temperature gives more creative, random names.
+    """
+    
+    # 3. Create the generation_config object to pass to the API
+    # This is how you send parameters like temperature, top_p, etc.
+    generation_config = {
+        "temperature": request.temperature,
+    }
+
+    prompt = f"""
+    You are a creative branding expert. Brainstorm a list of 5 unique and catchy names for the following startup.
+
+    Startup Description: "{request.description}"
+    """
+
+    # 4. Call the Gemini API, passing in the generation_config
+    response = model.generate_content(
+        prompt,
+        generation_config=generation_config
+    )
+
+    # 5. Return the AI's response
+    return {
+        "startup_names": response.text.strip(),
+        "temperature_used": request.temperature
+    }
+
 
 # ===================================================================
 # ===== TEMPERATURE-CONTROL  ======
@@ -442,6 +499,7 @@ async def generate_first_step_with_stop_sequence(request: FirstStepRequest):
         "first_step": "1. " + response.text.strip(),
     }
 
+
 # ===================================================================
 # ===== FUNCTION-CALLING ======
 # ===================================================================
@@ -544,4 +602,3 @@ async def smart_assistant(request: AssistantRequest):
     
     # The final response from the model will be a natural language summary
     return {"response": response.text}
-
