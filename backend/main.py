@@ -15,43 +15,56 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 model = genai.GenerativeModel('gemini-1.5-flash')
 
 # ===================================================================
-# ===== SYSTEM/USER PROMPT & DYNAMIC PROMPTING =====
+# ===== SYSTEM/USER PROMPT, DYNAMIC PROMPTING & STRUCTURED OUTPUT =====
 # ===================================================================
 
-# Pydantic model for the request body
+# 1. Define the Pydantic model for the user's input (this stays the same)
 class UserInput(BaseModel):
     skills: str
     interests: str
 
-@app.post("/generate-startup-idea")
+# 2. Define the Pydantic model for the AI's STRUCTURED OUTPUT
+#    This schema will be passed to the Gemini API.
+class StartupIdea(BaseModel):
+    startup_name: str = Field(description="A catchy and descriptive name for the startup.")
+    concept: str = Field(description="A one-sentence elevator pitch for the startup.")
+    monetization_strategy: str = Field(description="A brief explanation of how the business would make money.")
+
+# 3. Update the endpoint to use the new structured output feature
+@app.post("/generate-startup-idea", response_model=StartupIdea)
 async def generate_startup_idea(user_input: UserInput):
-    # 1. Define the System Prompt using the RTFC framework
-    system_prompt = """
-    Role: You are AutoMentor, an expert startup advisor and business strategist with a knack for identifying innovative, monetizable business ideas.
+    """
+    This endpoint demonstrates Structured Output. It forces the Gemini model
+    to respond with a JSON object that strictly adheres to the `StartupIdea`
+    Pydantic schema.
+    """
+    
+    # The prompt can now be simpler, as the schema handles the formatting instructions.
+    prompt = f"""
+    You are an expert startup advisor. Generate a unique and practical startup idea based on the user's provided skills and interests.
 
-    Task: Your task is to generate a unique and practical startup idea based on the user's provided skills and interests. You must analyze their input and create a concept that logically combines them.
 
-    Format: You must respond only with a clean, well-formed JSON object. Do not include any introductory text, explanations, or markdown formatting like ```json. The JSON object must contain three keys: "startup_name" (a catchy name for the business), "concept" (a one-sentence elevator pitch), and "monetization_strategy" (a brief explanation of how it would make money).
-
-    Context: The user is an aspiring entrepreneur who is in the early stages of brainstorming. Your tone should be encouraging and professional. The ideas should be suitable for a solo founder or a small team to start as a Minimum Viable Product (MVP).
+    User's Skills: {user_input.skills}
+    User's Interests: {user_input.interests}
     """
 
-    # 2. Create the User Prompt from the user's input
 
-    # DYNAMIC PROMPTING ASSIGNMENT: The user_prompt below is created dynamically.
-    # It uses an f-string to inject the user's specific skills and interests
-    # into the prompt template at runtime, making it personal and context-aware.
+    # 4. Create the generation_config with the new JSON mode settings
+    generation_config = {
+        "response_mime_type": "application/json",
+        "response_schema": StartupIdea.model_json_schema(),
+    }
 
-    user_prompt = f"User's Skills: {user_input.skills}. User's Interests: {user_input.interests}."
+    # 5. Call the Gemini API with the new configuration
+    response = model.generate_content(
+        prompt,
+        generation_config=generation_config
+    )
 
-    # 3. Combine the prompts for the final API call
-    full_prompt = f"{system_prompt}\n\n{user_prompt}"
-
-    # 4. Call the Gemini API
-    response = model.generate_content(full_prompt)
-
-    # 5. Return the AI's response
-    return {"idea": response.text}
+    # 6. Parse and return the validated JSON object
+    # The response.text is a guaranteed valid JSON string, so we can parse it.
+    # FastAPI will automatically convert the Pydantic object back to a JSON response.
+    return StartupIdea.model_validate_json(response.text)
 
 # ===================================================================
 # ===== ZERO-SHOT PROMPTING =====
