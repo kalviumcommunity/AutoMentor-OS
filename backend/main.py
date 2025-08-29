@@ -602,3 +602,35 @@ async def smart_assistant(request: AssistantRequest):
     
     # The final response from the model will be a natural language summary
     return {"response": response.text}
+
+
+# ===================================================================
+# ===== EMBEDDINGS ======
+# ===================================================================
+
+# 1. Import the new utility function
+from utils.rag import generate_embedding
+
+# 2. Create a Pydantic model for the request
+class EmbeddingRequest(BaseModel):
+    text: str
+
+# 3. Create the new endpoint to demonstrate embedding generation
+@app.post("/generate-embedding")
+async def generate_embedding_endpoint(request: EmbeddingRequest):
+    """
+    This endpoint demonstrates the generation of embeddings.
+    It takes a string of text and returns its numerical vector representation.
+    """
+    
+    # Call the utility function from our rag.py file
+    embedding_vector = generate_embedding(request.text)
+    
+    if not embedding_vector:
+        return {"error": "Failed to generate embedding."}, 500
+
+    return {
+        "text": request.text,
+        "embedding": embedding_vector
+    }
+
