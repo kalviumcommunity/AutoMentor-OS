@@ -441,3 +441,107 @@ async def generate_first_step_with_stop_sequence(request: FirstStepRequest):
     return {
         "first_step": "1. " + response.text.strip(),
     }
+
+# ===================================================================
+# ===== FUNCTION-CALLING ======
+# ===================================================================
+from google.generativeai.types import Tool
+
+# --- Step 1: Define the Python functions the AI can call ("Tools") ---
+
+# We will reuse the logic from our previous assignments to make these tools powerful.
+# Note: We are defining these as regular functions, not FastAPI endpoints.
+
+def generate_startup_idea_tool(skills: str, interests: str) -> dict:
+    """
+    Generates a unique and practical startup idea based on user's skills and interests.
+    Returns the idea as a structured dictionary.
+    """
+    print(f"--- Calling Tool: generate_startup_idea_tool with skills='{skills}', interests='{interests}' ---")
+    
+    # Re-using the structured output logic from the previous assignment
+    prompt = f"""
+    You are an expert startup advisor. Generate a unique and practical startup idea based on the user's provided skills and interests.
+    User's Skills: {skills}
+    User's Interests: {interests}
+    """
+    generation_config = {
+        "response_mime_type": "application/json",
+        "response_schema": StartupIdea.model_json_schema(),
+    }
+    response = model.generate_content(prompt, generation_config=generation_config)
+    
+    # Pydantic's .model_dump() converts the object to a dictionary, which is required for the tool
+    return StartupIdea.model_validate_json(response.text).model_dump()
+
+def validate_idea_tool(idea_concept: str) -> str:
+    """
+    Analyzes the market viability of a given startup idea concept using a step-by-step reasoning process.
+    Returns the analysis as a string.
+    """
+    print(f"--- Calling Tool: validate_idea_tool with concept='{idea_concept}' ---")
+    
+    # Re-using the Chain of Thought prompt
+    prompt = f"""
+    Analyze the market viability of the following startup idea. Let's think step by step.
+    First, identify the primary target audience for this idea.
+    Second, list 2-3 potential competitors or existing alternatives.
+    Third, provide a summary of the idea's potential strengths and weaknesses.
+    Startup Idea: "{idea_concept}"
+    """
+    response = model.generate_content(prompt)
+    return response.text.strip()
+
+# --- Step 2: Configure the model with the available tools ---
+
+# Create a mapping from the function names (as strings) to the actual Python functions
+available_tools = {
+    "generate_startup_idea_tool": generate_startup_idea_tool,
+    "validate_idea_tool": validate_idea_tool,
+}
+
+# Create a Tool object that the Gemini API understands
+tools = [
+    Tool.from_function(generate_startup_idea_tool),
+    Tool.from_function(validate_idea_tool),
+]
+
+# Initialize a new model instance specifically for function calling
+model_with_tools = genai.GenerativeModel('gemini-1.5-flash', tools=tools)
+
+# --- Step 3: Create the smart assistant endpoint ---
+
+class AssistantRequest(BaseModel):
+    prompt: str
+
+@app.post("/smart-assistant")
+async def smart_assistant(request: AssistantRequest):
+    """
+    This endpoint demonstrates function calling. The model can choose to call
+    one of the provided Python functions to fulfill the user's request.
+    """
+    # Start a chat session to handle the multi-turn conversation of function calling
+    chat = model_with_tools.start_chat()
+    
+    # First call to the model
+    response = chat.send_message(request.prompt)
+    
+    # Check if the model decided to call a function
+    if response.function_calls:
+        # The model can request multiple function calls at once
+        for function_call in response.function_calls:
+            # Look up the actual function to call from our mapping
+            function_to_call = available_tools[function_call.name]
+            
+            # Call the function with the arguments provided by the model
+            function_response = function_to_call(**function_call.args)
+            
+            # Send the function's return value back to the model
+            # This is the crucial second step.
+            response = chat.send_message(
+                [function_call, {"response": function_response}]
+            )
+    
+    # The final response from the model will be a natural language summary
+    return {"response": response.text}
+
