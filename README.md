@@ -1,4 +1,4 @@
-# 🧠 AutoMentor OS – MVP (Gemini AI)
+# 🧠 AutoMentor OS
 
 AutoMentor OS is an AI-powered startup assistant built with **Gemini AI**.  
 It uses **Function Calling**, **RAG (Retrieval-Augmented Generation)**, **Structured Output**, and **Dynamic Prompting** to help users:
